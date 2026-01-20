@@ -43,9 +43,6 @@ program
             }
         }
 
-        // If any cell depends on md, provide a local markdown renderer rather than stdlib's CDN loader.
-        const includeMarkdown = processedCells.some(c => c.inputs.includes("md"));
-
         // 3. Generate Output
         const outDir = options.out || path.join(process.cwd(), libName);
         const srcDir = path.join(outDir, "src");
@@ -56,12 +53,9 @@ program
         console.log(`Generating files in ${outDir}...`);
 
         fs.writeFileSync(path.join(srcDir, "define.js"), generateDefineJs(processedCells));
-        fs.writeFileSync(path.join(srcDir, "runtime.js"), generateRuntimeJs({ includeMarkdown }));
+        fs.writeFileSync(path.join(srcDir, "runtime.js"), generateRuntimeJs());
         fs.writeFileSync(path.join(srcDir, "index.js"), generateIndexJs());
-        fs.writeFileSync(
-            path.join(outDir, "package.json"),
-            generatePackageJson(libName, allDependencies, { includeMarkdown })
-        );
+        fs.writeFileSync(path.join(outDir, "package.json"), generatePackageJson(libName, allDependencies));
         fs.writeFileSync(path.join(outDir, "README.md"), generateReadme(libName));
 
         console.log("Done! To use:");
