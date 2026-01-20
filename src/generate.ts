@@ -107,30 +107,50 @@ export class Runtime extends ObservableRuntime {
 
 function observeGenerator(initialize) {
   let dispose;
-  const iterator = {
-    next() {
-      return new Promise((resolve, reject) => {
-        if (!dispose) {
-          try {
-            dispose = initialize(
-              (value) => resolve({ value, done: false }),
-              (error) => reject(error)
-            );
-          } catch (error) {
-            reject(error);
-          }
-        }
-      });
-    },
+  let done = false;
+  const queue = [];
+  let notify;
+
+  function enqueue(item) {
+    queue.push(item);
+    if (notify) {
+      notify();
+      notify = null;
+    }
+  }
+
+  async function next() {
+    if (done) return { value: undefined, done: true };
+    if (!dispose) {
+      dispose = initialize(
+        (value) => enqueue({ type: "value", value }),
+        (error) => enqueue({ type: "error", error })
+      );
+    }
+    while (!queue.length) {
+      await new Promise((r) => (notify = r));
+      if (done) return { value: undefined, done: true };
+    }
+    const item = queue.shift();
+    if (item.type === "error") throw item.error;
+    return { value: item.value, done: false };
+  }
+
+  return {
+    next,
     return() {
+      done = true;
       if (dispose) dispose();
+      if (notify) {
+        notify();
+        notify = null;
+      }
       return Promise.resolve({ value: undefined, done: true });
     },
     [Symbol.asyncIterator]() {
       return this;
     }
   };
-  return iterator;
 }
 
 function inputGenerator(element) {
@@ -431,10 +451,34 @@ This library was generated from an Observable Notebook.
 import { mount } from "${name}";
 
 // Renders one root per cell (notebook-kit semantics), supporting display() and view().
-const { runtime } = mount(document.body);
+const { runtime } = mount(document.getElementById("notebook") ?? document.body);
 
 // Later, when done:
 // runtime.dispose();
 \`\`\`
+
+## Layout / Directing Output
+
+This package uses notebook-kit style placement:
+
+- Each cell renders into a DOM element with id \`cell-<id>\` (e.g. \`cell-4\`).
+- If a matching element already exists anywhere in the document, \`mount()\` will render into it.
+- Otherwise \`mount(container)\` will create the missing cell roots and append them to \`container\`.
+
+Example:
+
+\`\`\`html
+<div id="notebook">
+  <div id="cell-1"></div>
+  <div id="cell-2"></div>
+  <div id="cell-3"></div>
+  <div id="cell-4"></div>
+</div>
+\`\`\`
+
+## display()
+
+Cells can call \`display(value)\` to imperatively append output into the current cell’s root.
+Multiple \`display(...)\` calls append multiple outputs, matching notebook-kit behavior.
 `;
 }

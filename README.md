@@ -55,12 +55,66 @@ npm install
 ### 3. Use in Your Project
 
 ```javascript
-import { Runtime, Inspector } from "@observablehq/runtime";
-import define from "./my-lib/src/index.js";
+import { mount } from "my-lib";
 
-const runtime = new Runtime();
-const main = runtime.module(define, Inspector.into(document.body));
+// notebook-kit-style rendering (one DOM root per cell)
+const { runtime } = mount(document.getElementById("notebook"));
+
+// Later:
+// runtime.dispose();
 ```
+
+## Directing Output to Containers (Layout)
+
+This project now mirrors notebook-kit’s placement model:
+
+- Output is rendered **per cell**, not per variable.
+- Each cell renders into a DOM element with id `cell-<id>` (for example `cell-4`).
+- `mount(container)` will **reuse** any existing `#cell-<id>` elements; if a cell root is missing, it will create and append it under `container`.
+
+### Option A: Provide cell containers in your HTML (recommended)
+
+Put the cell roots exactly where you want them to appear:
+
+```html
+<div id="notebook">
+  <h2>Inputs</h2>
+  <div id="cell-2"></div>
+  <div id="cell-3"></div>
+
+  <h2>Diff</h2>
+  <div id="cell-4"></div>
+
+  <h2>Message</h2>
+  <div id="cell-5"></div>
+</div>
+```
+
+Then mount:
+
+```js
+import { mount } from "my-lib";
+mount(document.getElementById("notebook"));
+```
+
+### Option B: Let mount() create containers automatically
+
+If you don’t create any `#cell-<id>` elements, `mount(document.body)` will append them in document order at the end of the container.
+
+### Finding cell ids
+
+- Cell ids come from the notebook HTML’s `<script id="…">` attributes.
+- The generated package also exports `cells` metadata you can inspect to see ids and any `output="..."` names.
+
+## What `display()` Does
+
+`display(value)` is not “the return value of the cell”. It is an **imperative rendering hook** scoped to the current cell:
+
+- It appends rendered output into that cell’s root element (`#cell-<id>`).
+- Multiple calls append multiple outputs (e.g. `display(out); display("…")`).
+- On re-evaluation, the cell root is cleared at the start of the next render cycle (matching notebook-kit behavior).
+
+If a cell does **not** call `display()` and is an expression cell, it may be **autodisplayed** (rendered automatically) depending on the notebook-kit transpiler’s `autodisplay` flag.
 
 ## How It Works
 
