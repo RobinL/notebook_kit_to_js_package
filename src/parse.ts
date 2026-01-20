@@ -3,6 +3,7 @@ import slugify from "@sindresorhus/slugify";
 
 export interface RawCell {
     id: number;
+    index: number; // 0-based stable index for cell:<index> fallback
     name?: string; // from data-name attribute
     source: string;
     language: "js" | "markdown" | "html" | "tex";
@@ -13,9 +14,13 @@ export function parseNotebookHtml(html: string): RawCell[] {
     const doc = dom.window.document;
     const cells: RawCell[] = [];
 
-    // Find all script tags in the notebook
-    const scripts = doc.querySelectorAll("script");
+    // Prefer scripts inside <notebook> element; fall back to all scripts if absent
+    const notebookEl = doc.querySelector("notebook");
+    const scriptContainer = notebookEl || doc;
+    const scripts = scriptContainer.querySelectorAll("script");
+
     let idCounter = 0;
+    let indexCounter = 0;
 
     scripts.forEach((script) => {
         const type = script.getAttribute("type");
@@ -23,11 +28,11 @@ export function parseNotebookHtml(html: string): RawCell[] {
         const source = script.textContent || "";
 
         if (type === "module") {
-            cells.push({ id: ++idCounter, name, source, language: "js" });
+            cells.push({ id: ++idCounter, index: indexCounter++, name, source, language: "js" });
         } else if (type === "text/markdown") {
-            cells.push({ id: ++idCounter, name, source, language: "markdown" });
+            cells.push({ id: ++idCounter, index: indexCounter++, name, source, language: "markdown" });
         } else if (type === "text/html") {
-            cells.push({ id: ++idCounter, name, source, language: "html" });
+            cells.push({ id: ++idCounter, index: indexCounter++, name, source, language: "html" });
         }
     });
 

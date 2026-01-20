@@ -3,6 +3,7 @@ import { rewriteImports } from "./rewrite.js";
 
 export interface TranspiledCell {
     id: number;
+    index: number;  // 0-based stable index for cell:<index> fallback
     name?: string;
     body: string;      // The function body
     inputs: string[];  // Variables this cell needs
@@ -17,6 +18,7 @@ function escapeRegExp(value: string): string {
 
 export function processCell(
     id: number,
+    index: number,
     source: string,
     language: "js" | "markdown" | "html" | "tex",
     name?: string
@@ -74,6 +76,7 @@ export function processCell(
 
     return {
         id,
+        index,
         name,
         body: transpiled.body,
         inputs: transpiled.inputs || [],

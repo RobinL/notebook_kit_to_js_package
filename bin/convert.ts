@@ -35,7 +35,7 @@ program
 
         for (const cell of rawCells) {
             try {
-                const processed = processCell(cell.id, cell.source, cell.language, cell.name);
+                const processed = processCell(cell.id, cell.index, cell.source, cell.language, cell.name);
                 processedCells.push(processed);
                 processed.dependencies.forEach(d => allDependencies.add(d));
             } catch (err) {

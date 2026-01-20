@@ -310,85 +310,167 @@ This is a complete, working implementation. For modifications:
 
 MIT
 
+---
 
-##
+## Usage Examples
 
-```index.html
+### Example 1: Simple Render (No Targeting)
+
+The simplest way to render a notebook – just mount everything into a container:
+
+**HTML:**
+```html
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Notebook Kit: Custom Layout</title>
+  <title>Simple Notebook</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@observablehq/inspector@5/dist/inspector.css">
+</head>
+<body>
+  <h1>My Notebook</h1>
+  <div id="notebook"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
+```
 
+**main.js:**
+```javascript
+import { mount } from "hello-world-diff-match-patch-demo";
 
+// Render everything into #notebook
+mount(document.getElementById("notebook"));
+```
 
+That's it! All cells render in order inside `#notebook`.
 
+---
+
+### Example 2: Targeted Rendering with `data-cell`
+
+For custom layouts, use `data-cell` attributes to place specific cells into specific DOM elements.
+
+In your notebook HTML, name your cells with `data-name`:
+
+```html
+<notebook>
+    <script type="module" data-name="one">
+        const one = view(Inputs.text({ label: "one", value: "robin" }));
+        ({ one })
+    </script>
+
+    <script type="module" data-name="other">
+        const other = view(Inputs.text({ label: "other", value: "Roin" }));
+        ({ other })
+    </script>
+
+    <script type="module" data-name="out">
+        import DiffMatchPatch from "diff-match-patch";
+        const dmp = new DiffMatchPatch();
+        display(dmp.diff_prettyHtml(dmp.diff_main(one, other)));
+    </script>
+</notebook>
+```
+
+Then in your HTML template, use `data-cell` to target where each cell renders:
+
+**HTML:**
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Custom Layout</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@observablehq/inspector@5/dist/inspector.css">
   <style>
-
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .card { padding: 1rem; border: 1px solid #ccc; border-radius: 8px; }
+    .full-width { grid-column: 1 / -1; }
   </style>
 </head>
-
 <body>
-  <h1>🔤 Diff Match Patch: Custom Layout</h1>
+  <h1>🔤 Diff Match Patch</h1>
 
-  <!-- 1. The Inputs Grid -->
   <div class="grid">
     <div class="card">
       <h3>Original Text</h3>
-      <div id="target-one"></div> <!-- Target for 'viewof one' -->
+      <div data-cell="one"></div>
     </div>
 
     <div class="card">
       <h3>Comparison Text</h3>
-      <div id="target-other"></div> <!-- Target for 'viewof other' -->
+      <div data-cell="other"></div>
     </div>
   </div>
 
-  <!-- 2. The Output Area -->
   <div class="card full-width">
     <h3>Diff Result</h3>
-    <div id="target-result"></div> <!-- Target for 'out' -->
+    <div data-cell="out"></div>
   </div>
 
-  <script type="module" src="/src/main.ts"></script>
-</body>
+  <!-- Container for any unmatched cells (e.g. markdown) -->
+  <div id="notebook"></div>
 
+  <script type="module" src="/src/main.js"></script>
+</body>
 </html>
 ```
 
-```main.ts
-import define, { Runtime, Inspector, createLibrary } from "hello-world-diff-match-patch-demo";
+**main.js:**
+```javascript
+import { mount } from "hello-world-diff-match-patch-demo";
 
-const runtime = new Runtime(createLibrary());
+// Mount with data-cell targeting; unmatched cells go to #notebook
+mount(document.getElementById("notebook"));
+```
 
-runtime.module(define, (name) => {
-  switch (name) {
-    case "viewof one":
-      return new Inspector(document.getElementById("target-one")!);
+The `mount()` function automatically:
+1. Finds `[data-cell="one"]`, `[data-cell="other"]`, `[data-cell="out"]` in the document
+2. Renders those cells into their targeted elements
+3. Appends any unmatched cells (like markdown) to the container
 
-    case "viewof other":
-      return new Inspector(document.getElementById("target-other")!);
+---
 
-    case "out":
-      return new Inspector(document.getElementById("target-result")!);
+### Example 3: Programmatic Targeting
 
-    default:
-      return true;
-  }
+You can also pass a `targets` map for programmatic control:
+
+```javascript
+import { mount } from "hello-world-diff-match-patch-demo";
+
+mount(document.body, {
+  targets: {
+    "one": document.getElementById("target-one"),
+    "other": document.getElementById("target-other"),
+    "out": document.getElementById("target-result"),
+  },
+  appendUnmatched: false  // Hide cells without explicit targets
 });
+```
 
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    runtime.dispose();
+---
 
-    ["target-one", "target-other", "target-result"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = "";
-    });
-  });
-}
+### Example 4: Fallback Cell IDs
+
+Every cell also has a stable `cell:<index>` identifier (0-based), so you can target cells even without a `data-name`:
+
+```html
+<!-- Target the 3rd cell (index 2) -->
+<div data-cell="cell:2"></div>
+```
+
+---
+
+### Cleanup (for HMR / SPA)
+
+The `mount()` function returns the runtime for cleanup:
+
+```javascript
+const { runtime } = mount(document.getElementById("notebook"));
+
+// Later, when unmounting:
+runtime.dispose();
 ```
 
 ---
