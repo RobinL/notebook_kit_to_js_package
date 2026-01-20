@@ -16,6 +16,26 @@ function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * Remove common leading whitespace from all lines (dedent).
+ * This handles indented content inside HTML <script> blocks.
+ */
+function dedent(text: string): string {
+    const lines = text.split("\n");
+    // Find minimum indentation (ignoring blank lines)
+    let minIndent = Infinity;
+    for (const line of lines) {
+        if (line.trim().length === 0) continue;
+        const match = line.match(/^(\s*)/);
+        if (match && match[1].length < minIndent) {
+            minIndent = match[1].length;
+        }
+    }
+    if (minIndent === Infinity || minIndent === 0) return text.trim();
+    // Remove that many spaces from each line
+    return lines.map(line => line.slice(minIndent)).join("\n").trim();
+}
+
 export function processCell(
     id: number,
     index: number,
@@ -37,10 +57,13 @@ export function processCell(
     );
 
     // Convert non-JS blocks to template literals for the runtime
+    // Dedent to remove HTML indentation that would otherwise create code blocks
     if (language === "markdown") {
-        jsSource = `md\`${source.replace(/`/g, "\\`")}\``;
+        const content = dedent(source);
+        jsSource = `md\`${content.replace(/`/g, "\\`")}\``;
     } else if (language === "html") {
-        jsSource = `html\`${source.replace(/`/g, "\\`")}\``;
+        const content = dedent(source);
+        jsSource = `html\`${content.replace(/`/g, "\\`")}\``;
     } else if (language === "js") {
         // notebook-kit HTML exports rely on helper globals that aren't present in standard JS.
         // We rewrite them away so the generated define.js becomes standard Observable Runtime code.

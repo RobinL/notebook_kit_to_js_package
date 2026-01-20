@@ -86,19 +86,56 @@ export function generateIndexJs(): string {
     ].join("\n");
 }
 
-export function generateRuntimeJs(): string {
-    return [
+export interface GenerateRuntimeOptions {
+    /**
+     * If true, the generated runtime provides a local `md` tagged template literal
+     * implementation (via the `marked` package) rather than relying on stdlib's
+     * CDN-based lazy loader.
+     */
+    includeMarkdown?: boolean;
+}
+
+export function generateRuntimeJs(options: GenerateRuntimeOptions = {}): string {
+    const { includeMarkdown = false } = options;
+
+    const lines: string[] = [
         `import { Runtime as ObservableRuntime } from "@observablehq/runtime";`,
         `import { Inspector } from "@observablehq/inspector";`,
         `import { Library } from "@observablehq/stdlib";`,
         `import * as Inputs from "@observablehq/inputs";`,
+        ...(includeMarkdown ? [`import { marked } from "marked";`] : []),
         `import define, { cells } from "./define.js";`,
         ``,
         `export { Inspector, Library, Inputs };`,
-        ``,
+        ``
+    ];
+
+    if (includeMarkdown) {
+        lines.push(
+            `marked.setOptions({ langPrefix: "" });`,
+            ``,
+            `function md(strings, ...values) {`,
+            `  // Minimal md tagged template implementation for notebook markdown cells.`,
+            `  // Note: embedded expressions are stringified; DOM embedding is not supported here.`,
+            `  const text = String.raw({ raw: strings }, ...values.map(v => v == null ? "" : String(v)));`,
+            `  const root = document.createElement("div");`,
+            `  root.innerHTML = String(marked.parse(text)).trim();`,
+            `  return root;`,
+            `}`,
+            ``
+        );
+    }
+
+    lines.push(
         `export function createLibrary() {`,
         `  const library = new Library();`,
         `  // notebook-kit HTML exports assume Inputs is globally available; we provide it via the library.`,
+        ...(includeMarkdown
+            ? [
+                `  // Provide a local md tag to avoid stdlib's CDN-based markdown loader.`,
+                `  library.md = () => md;`
+            ]
+            : []),
         `  return Object.assign(library, { Inputs });`,
         `}`,
         ``,
@@ -228,16 +265,30 @@ export function generateRuntimeJs(): string {
         ``,
         `  return { runtime, main };`,
         `}`
-    ].join("\n");
+    );
+
+    return lines.join("\n");
 }
 
-export function generatePackageJson(name: string, dependencies: Set<string>): string {
+export interface GeneratePackageOptions {
+    includeMarkdown?: boolean;
+}
+
+export function generatePackageJson(
+    name: string,
+    dependencies: Set<string>,
+    options: GeneratePackageOptions = {}
+): string {
     const depsObj: Record<string, string> = {
         "@observablehq/runtime": "^5.0.0",
         "@observablehq/inspector": "latest",
         "@observablehq/stdlib": "latest",
         "@observablehq/inputs": "latest"
     };
+
+    if (options.includeMarkdown) {
+        depsObj["marked"] = "latest";
+    }
 
     // Add detected dependencies
     // We default to "latest" because we extracted names but not versions
