@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { parseNotebookHtml, parseLibraryName } from "../src/parse.js";
 import { processCell, type TranspiledCell } from "../src/transpile.js";
-import { generateDefineJs, generateIndexJs, generatePackageJson, generateReadme } from "../src/generate.js";
+import { generateDefineJs, generateIndexJs, generatePackageJson, generateReadme, generateRuntimeJs } from "../src/generate.js";
 
 const program = new Command();
 
@@ -53,6 +53,7 @@ program
         console.log(`Generating files in ${outDir}...`);
 
         fs.writeFileSync(path.join(srcDir, "define.js"), generateDefineJs(processedCells));
+        fs.writeFileSync(path.join(srcDir, "runtime.js"), generateRuntimeJs());
         fs.writeFileSync(path.join(srcDir, "index.js"), generateIndexJs());
         fs.writeFileSync(path.join(outDir, "package.json"), generatePackageJson(libName, allDependencies));
         fs.writeFileSync(path.join(outDir, "README.md"), generateReadme(libName));

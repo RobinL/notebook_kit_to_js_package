@@ -310,6 +310,87 @@ This is a complete, working implementation. For modifications:
 
 MIT
 
+
+##
+
+```index.html
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notebook Kit: Custom Layout</title>
+
+
+
+
+  <style>
+
+  </style>
+</head>
+
+<body>
+  <h1>🔤 Diff Match Patch: Custom Layout</h1>
+
+  <!-- 1. The Inputs Grid -->
+  <div class="grid">
+    <div class="card">
+      <h3>Original Text</h3>
+      <div id="target-one"></div> <!-- Target for 'viewof one' -->
+    </div>
+
+    <div class="card">
+      <h3>Comparison Text</h3>
+      <div id="target-other"></div> <!-- Target for 'viewof other' -->
+    </div>
+  </div>
+
+  <!-- 2. The Output Area -->
+  <div class="card full-width">
+    <h3>Diff Result</h3>
+    <div id="target-result"></div> <!-- Target for 'out' -->
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>
+```
+
+```main.ts
+import define, { Runtime, Inspector, createLibrary } from "hello-world-diff-match-patch-demo";
+
+const runtime = new Runtime(createLibrary());
+
+runtime.module(define, (name) => {
+  switch (name) {
+    case "viewof one":
+      return new Inspector(document.getElementById("target-one")!);
+
+    case "viewof other":
+      return new Inspector(document.getElementById("target-other")!);
+
+    case "out":
+      return new Inspector(document.getElementById("target-result")!);
+
+    default:
+      return true;
+  }
+});
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    runtime.dispose();
+
+    ["target-one", "target-other", "target-result"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = "";
+    });
+  });
+}
+```
+
 ---
 
 **Created**: January 2026
