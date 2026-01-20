@@ -12,8 +12,8 @@ export function generateDefineJs(cells: TranspiledCell[]): string {
                 output: cell.output,
                 inputs: cell.inputs,
                 outputs: cell.outputs,
-            // notebook-kit doesn't treat view() as a declaration type; view() is an input helper.
-            isView: false,
+                // notebook-kit doesn't treat view() as a declaration type; view() is an input helper.
+                isView: false,
                 autodisplay: cell.autodisplay,
                 usesDisplay: cell.usesDisplay,
                 usesView: cell.usesView
@@ -41,31 +41,31 @@ export function generateDefineJs(cells: TranspiledCell[]): string {
     lines.push(`  const main = runtime.module();`);
 
     for (const cell of cells) {
-      const cellFnName = `_${cell.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      const inputs = JSON.stringify(cell.inputs.filter(i => i !== "display" && i !== "view"));
-      const vid = cell.output ?? (cell.outputs.length ? `cell ${cell.id}` : null);
-      const vidJson = vid === null ? "null" : JSON.stringify(vid);
+        const cellFnName = `_${cell.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const inputs = JSON.stringify(cell.inputs.filter(i => i !== "display" && i !== "view"));
+        const vid = cell.output ?? (cell.outputs.length ? `cell ${cell.id}` : null);
+        const vidJson = vid === null ? "null" : JSON.stringify(vid);
 
-      lines.push(`  const ${cellFnName} = ${cell.body};`);
+        lines.push(`  const ${cellFnName} = ${cell.body};`);
 
-      // Define the primary cell variable once.
-      if (cell.outputs.length === 0) {
-        // Anonymous / side-effect cell (e.g. markdown)
-        lines.push(`  main.variable(observer()).define(${inputs}, ${cellFnName});`);
-        continue;
-      }
-
-      lines.push(`  main.variable(observer(${vidJson})).define(${vidJson}, ${inputs}, ${cellFnName});`);
-
-      // Define named outputs as projections from the cell variable (only when
-      // the cell doesn't have an explicit output name).
-      if (cell.output == null) {
-        for (const output of cell.outputs) {
-          lines.push(
-            `  main.variable(observer(${JSON.stringify(output)})).define(${JSON.stringify(output)}, [${vidJson}], (exports) => exports && typeof exports === "object" && ${JSON.stringify(output)} in exports ? exports[${JSON.stringify(output)}] : exports);`
-          );
+        // Define the primary cell variable once.
+        if (cell.outputs.length === 0) {
+            // Anonymous / side-effect cell (e.g. markdown)
+            lines.push(`  main.variable(observer()).define(${inputs}, ${cellFnName});`);
+            continue;
         }
-      }
+
+        lines.push(`  main.variable(observer(${vidJson})).define(${vidJson}, ${inputs}, ${cellFnName});`);
+
+        // Define named outputs as projections from the cell variable (only when
+        // the cell doesn't have an explicit output name).
+        if (cell.output == null) {
+            for (const output of cell.outputs) {
+                lines.push(
+                    `  main.variable(observer(${JSON.stringify(output)})).define(${JSON.stringify(output)}, [${vidJson}], (exports) => exports && typeof exports === "object" && ${JSON.stringify(output)} in exports ? exports[${JSON.stringify(output)}] : exports);`
+                );
+            }
+        }
     }
 
     lines.push(`  return main;`);
@@ -352,10 +352,13 @@ export function mount(container = document.body) {
 
   // Define each cell with its own root element
   for (const cellMeta of cells) {
-    const root = document.createElement("div");
-    root.className = "observablehq observablehq--cell";
-    root.id = "cell-" + cellMeta.id;
-    container.appendChild(root);
+    const existing = document.getElementById("cell-" + cellMeta.id);
+    const root = existing ?? document.createElement("div");
+    root.classList.add("observablehq", "observablehq--cell");
+    if (!existing) {
+      root.id = "cell-" + cellMeta.id;
+      container.appendChild(root);
+    }
 
     // Create state for this cell
     const state = {
@@ -370,7 +373,7 @@ export function mount(container = document.body) {
     // Get the body function for this cell
     const cellKey = \`cell_\${cellMeta.id.replace(/[^a-zA-Z0-9]/g, '_')}\`;
     const bodyFn = cellBodies[cellKey];
-    
+
     if (bodyFn) {
       defineCell(main, state, cellMeta, bodyFn);
     }
