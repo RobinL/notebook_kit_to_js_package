@@ -84,7 +84,8 @@ Ready to use with node_modules
 Extracts cells from the notebook HTML file, identifying:
 - Code cells (JavaScript/Observable JavaScript)
 - Markdown cells
-- Cell names from `data-name` attributes
+- Cell IDs from `id` attributes (canonical notebook-kit format)
+- Cell output names from `output` attributes
 
 ### 2. **Transpile**
 Uses `@observablehq/notebook-kit` to convert Observable JavaScript to standard JavaScript:
@@ -365,21 +366,25 @@ That's it! All cells render in order inside `#notebook`.
 
 For custom layouts, use `data-cell` attributes to place specific cells into specific DOM elements.
 
-In your notebook HTML, name your cells with `data-name`:
+Cells can be targeted in three ways:
+1. **By cell ID**: `data-cell="cell-2"` (matches `<script id="2">`)
+2. **By output attribute**: `data-cell="diffOutput"` (matches `<script output="diffOutput">`)
+3. **By output name**: `data-cell="one"` (matches cell that defines `one` or `viewof one`)
 
+**Notebook HTML (canonical format):**
 ```html
 <notebook>
-    <script type="module" data-name="one">
+    <script id="1" type="module">
         const one = view(Inputs.text({ label: "one", value: "robin" }));
         ({ one })
     </script>
 
-    <script type="module" data-name="other">
+    <script id="2" type="module">
         const other = view(Inputs.text({ label: "other", value: "Roin" }));
         ({ other })
     </script>
 
-    <script type="module" data-name="out">
+    <script id="3" type="module" output="diffResult">
         import DiffMatchPatch from "diff-match-patch";
         const dmp = new DiffMatchPatch();
         display(dmp.diff_prettyHtml(dmp.diff_main(one, other)));
@@ -409,18 +414,22 @@ Then in your HTML template, use `data-cell` to target where each cell renders:
   <div class="grid">
     <div class="card">
       <h3>Original Text</h3>
+      <!-- Target by output name -->
       <div data-cell="one"></div>
     </div>
 
     <div class="card">
       <h3>Comparison Text</h3>
+      <!-- Target by output name -->
       <div data-cell="other"></div>
     </div>
   </div>
 
   <div class="card full-width">
     <h3>Diff Result</h3>
-    <div data-cell="out"></div>
+    <!-- Target by output attribute OR by cell ID -->
+    <div data-cell="diffResult"></div>
+    <!-- Alternative: <div data-cell="cell-3"></div> -->
   </div>
 
   <!-- Container for any unmatched cells (e.g. markdown) -->
@@ -440,7 +449,7 @@ mount(document.getElementById("notebook"));
 ```
 
 The `mount()` function automatically:
-1. Finds `[data-cell="one"]`, `[data-cell="other"]`, `[data-cell="out"]` in the document
+1. Finds matching `[data-cell="..."]` elements using any of the three targeting methods
 2. Renders those cells into their targeted elements
 3. Appends any unmatched cells (like markdown) to the container
 
@@ -455,9 +464,13 @@ import { mount } from "hello-world-diff-match-patch-demo";
 
 mount(document.body, {
   targets: {
+    // By output name
     "one": document.getElementById("target-one"),
     "other": document.getElementById("target-other"),
-    "out": document.getElementById("target-result"),
+    // By output attribute
+    "diffResult": document.getElementById("target-result"),
+    // Or by cell ID
+    "cell-3": document.getElementById("target-result"),
   },
   appendUnmatched: false  // Hide cells without explicit targets
 });
@@ -465,13 +478,20 @@ mount(document.body, {
 
 ---
 
-### Example 4: Fallback Cell IDs
+### Example 4: Cell Targeting Reference
 
-Every cell also has a stable `cell:<index>` identifier (0-based), so you can target cells even without a `data-name`:
+Every cell can be targeted by multiple identifiers:
+
+| Targeting Method | Example | Matches |
+|-----------------|---------|---------|
+| Cell ID | `cell-2` | `<script id="2">` |
+| Output attribute | `diffResult` | `<script output="diffResult">` |
+| Output name | `one` | Cell that outputs `one` or `viewof one` |
 
 ```html
-<!-- Target the 3rd cell (index 2) -->
-<div data-cell="cell:2"></div>
+<!-- All of these work for a cell with id="2" that outputs "one" -->
+<div data-cell="cell-2"></div>
+<div data-cell="one"></div>
 ```
 
 ---

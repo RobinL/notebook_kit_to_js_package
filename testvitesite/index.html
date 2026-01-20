@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notebook Kit: Custom Layout</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@observablehq/inspector@5/dist/inspector.css">
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f9f9f9;
+            padding: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 2rem;
+        }
+
+        h3 {
+            margin-top: 0;
+            color: #555;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0e0e0;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔤 Diff Match Patch: Custom Layout</h1>
+
+
+    <div class="grid">
+        <div class="card">
+            <h3>Original Text</h3>
+            <div data-cell="one"></div>
+        </div>
+
+        <div class="card">
+            <h3>Comparison Text</h3>
+            <div data-cell="other"></div>
+        </div>
+    </div>
+
+    <div class="card full-width">
+        <h3>Diff Result</h3>
+        <div data-cell="cell-4"></div>
+
+    </div>
+
+
+    <div id="notebook"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>

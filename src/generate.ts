@@ -1,17 +1,34 @@
 import type { TranspiledCell } from "./transpile.js";
 
 /**
- * Build the names array for a cell (used for data-cell targeting)
- * - Explicit data-name (if any)
- * - cell:<index> as stable fallback
+ * Build the targeting identifiers for a cell.
+ * Users can target cells by:
+ * - cell id (e.g., "cell-2" from id="2")
+ * - output attribute if set (e.g., "bliiip" from output="bliiip")
+ * - any of the outputs array members (e.g., "viewof one", "one", etc.)
  */
-function buildCellNames(cell: TranspiledCell): string[] {
-    const names: string[] = [];
-    if (cell.name) {
-        names.push(cell.name);
+function buildCellTargets(cell: TranspiledCell): string[] {
+    const targets: string[] = [];
+
+    // 1. Cell ID (prefixed with "cell-" to match canonical format)
+    targets.push(`cell-${cell.id}`);
+
+    // 2. Output attribute (if set)
+    if (cell.output) {
+        targets.push(cell.output);
     }
-    names.push(`cell:${cell.index}`);
-    return names;
+
+    // 3. All outputs (without "viewof " prefix for convenience)
+    for (const output of cell.outputs) {
+        if (output.startsWith("viewof ")) {
+            targets.push(output.slice("viewof ".length));
+        } else {
+            targets.push(output);
+        }
+    }
+
+    // Deduplicate while preserving order
+    return [...new Set(targets)];
 }
 
 export function generateDefineJs(cells: TranspiledCell[]): string {
@@ -23,7 +40,8 @@ export function generateDefineJs(cells: TranspiledCell[]): string {
             cells.map(cell => ({
                 id: cell.id,
                 index: cell.index,
-                names: buildCellNames(cell),
+                output: cell.output,
+                targets: buildCellTargets(cell),
                 inputs: cell.inputs,
                 outputs: cell.outputs,
                 isView: cell.viewName !== undefined
@@ -38,18 +56,14 @@ export function generateDefineJs(cells: TranspiledCell[]): string {
 
     for (const cell of cells) {
         const inputs = JSON.stringify(cell.inputs);
-        const cellFnName = `_${cell.id}`;
+        const cellFnName = `_${cell.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
         // notebook-kit returns a function expression in transpiled.body.
         lines.push(`  const ${cellFnName} = ${cell.body};`);
 
         if (cell.outputs.length === 0) {
             // Anonymous / side-effect cell (e.g. markdown)
-            if (cell.name) {
-                lines.push(`  main.variable(observer("${cell.name}")).define(${inputs}, ${cellFnName});`);
-            } else {
-                lines.push(`  main.variable(observer()).define(${inputs}, ${cellFnName});`);
-            }
+            lines.push(`  main.variable(observer()).define(${inputs}, ${cellFnName});`);
             continue;
         }
 
@@ -113,18 +127,23 @@ export function generateRuntimeJs(): string {
         `/**`,
         ` * Mount the notebook into a container with optional cell targeting.`,
         ` *`,
+        ` * Cell targeting supports three methods:`,
+        ` * 1. By cell id: data-cell="cell-2" (matches cell with id="2")`,
+        ` * 2. By output attribute: data-cell="bliiip" (matches cell with output="bliiip")`,
+        ` * 3. By output name: data-cell="one" (matches cell that outputs "one" or "viewof one")`,
+        ` *`,
         ` * @param {Element} [container=document.body] - Default container for unmatched cells`,
         ` * @param {Object} [options]`,
-        ` * @param {Record<string, Element>} [options.targets] - Map of cell name -> target element`,
+        ` * @param {Record<string, Element>} [options.targets] - Map of target identifier -> target element`,
         ` * @param {boolean} [options.appendUnmatched=true] - Whether to append unmatched cells to the container`,
         ` * @returns {{ runtime: Runtime, main: Module }} - The runtime and main module for cleanup`,
         ` */`,
         `export function mount(container = document.body, options = {}) {`,
         `  const { targets = {}, appendUnmatched = true } = options;`,
         ``,
-        `  // Build a lookup: cell name -> set of observable variable names that belong to it`,
+        `  // Build a lookup: target identifier -> set of observable variable names that belong to it`,
         `  // For view cells: the primary display is "viewof <name>", we suppress "<name>" to avoid duplicates`,
-        `  const cellNameToOutputs = new Map();`,
+        `  const cellTargetToOutputs = new Map();`,
         `  const suppressedOutputs = new Set();`,
         ``,
         `  for (const cell of cells) {`,
@@ -142,20 +161,20 @@ export function generateRuntimeJs(): string {
         `    if (primaryOutputs.length === 0) {`,
         `      primaryOutputs.push(null); // marker for anonymous cell`,
         `    }`,
-        `    for (const name of cell.names) {`,
-        `      cellNameToOutputs.set(name, { outputs: primaryOutputs, cell });`,
+        `    for (const target of cell.targets) {`,
+        `      cellTargetToOutputs.set(target, { outputs: primaryOutputs, cell });`,
         `    }`,
         `  }`,
         ``,
         `  // Helper: find target element for a cell`,
         `  function findTarget(cell) {`,
-        `    // 1. Try targets map`,
-        `    for (const name of cell.names) {`,
-        `      if (targets[name]) return targets[name];`,
+        `    // 1. Try targets map (programmatic targeting)`,
+        `    for (const target of cell.targets) {`,
+        `      if (targets[target]) return targets[target];`,
         `    }`,
         `    // 2. Try data-cell attribute in document`,
-        `    for (const name of cell.names) {`,
-        `      const escaped = CSS.escape(name);`,
+        `    for (const target of cell.targets) {`,
+        `      const escaped = CSS.escape(target);`,
         `      const el = document.querySelector(\`[data-cell="\${escaped}"]\`);`,
         `      if (el) return el;`,
         `    }`,

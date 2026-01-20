@@ -2,15 +2,15 @@ import { transpileJavaScript } from "@observablehq/notebook-kit";
 import { rewriteImports } from "./rewrite.js";
 
 export interface TranspiledCell {
-    id: number;
-    index: number;  // 0-based stable index for cell:<index> fallback
-    name?: string;
-    body: string;      // The function body
-    inputs: string[];  // Variables this cell needs
-    outputs: string[]; // Variables this cell defines (generation-time overrides)
+    id: string;            // from id attribute (canonical format)
+    index: number;         // 0-based stable index for fallback
+    output?: string;       // from output attribute (for targeting)
+    body: string;          // The function body
+    inputs: string[];      // Variables this cell needs
+    outputs: string[];     // Variables this cell defines (generation-time overrides)
     dependencies: Set<string>; // npm packages used
     dependencySpecs: Record<string, string>; // package -> version/range/tag (from npm: imports)
-    viewName?: string; // If set, this cell defines `viewof ${viewName}` and we should synthesize `${viewName}` via Generators.input
+    viewName?: string;     // If set, this cell defines `viewof ${viewName}` and we should synthesize `${viewName}` via Generators.input
 }
 
 function escapeRegExp(value: string): string {
@@ -38,24 +38,19 @@ function dedent(text: string): string {
 }
 
 export function processCell(
-    id: number,
+    id: string,
     index: number,
     source: string,
     language: "js" | "markdown" | "html" | "tex",
-    name?: string
+    output?: string
 ): TranspiledCell {
 
     let jsSource = source;
 
-    // Detect notebook-kit view() usage before we rewrite it away.
-    // In notebook-kit HTML exports, form elements are typically wrapped as:
-    //   const <name> = view(Inputs.*(...))
-    // Semantically, this means the cell defines a *view* and the runtime should provide:
-    //   viewof <name>  -> the element
-    //   <name>         -> Generators.input(viewof <name>)
-    const isViewCell = Boolean(
-        name && new RegExp(`\\b(?:const|let|var)\\s+${escapeRegExp(name)}\\s*=\\s*view\\s*\\(`).test(source)
-    );
+    // Detect notebook-kit view() usage. Look for pattern: const <name> = view(...)
+    // We'll use the first such match as the view name
+    const viewMatch = source.match(/\b(?:const|let|var)\s+(\w+)\s*=\s*view\s*\(/);
+    const viewName = viewMatch ? viewMatch[1] : undefined;
 
     // Convert non-JS blocks to template literals for the runtime
     // Dedent to remove HTML indentation that would otherwise create code blocks
@@ -85,23 +80,20 @@ export function processCell(
         resolveFiles: false
     });
 
-    // notebook-kit transpileJavaScript tends to over-report outputs for these HTML exports
-    // (e.g. it may include internal locals). Prefer the notebook's declared cell name.
+    // Build the outputs array
+    // notebook-kit transpileJavaScript returns outputs, but we prefer deriving from view detection
     const outputs: string[] = [];
-    let viewName: string | undefined;
-    if (name) {
-        if (isViewCell) {
-            viewName = name;
-            outputs.push(`viewof ${name}`);
-        } else {
-            outputs.push(name);
-        }
+    if (viewName) {
+        outputs.push(`viewof ${viewName}`);
+    } else if (transpiled.outputs && transpiled.outputs.length > 0) {
+        // Use transpiled outputs for non-view cells
+        outputs.push(...transpiled.outputs);
     }
 
     return {
         id,
         index,
-        name,
+        output,
         body: transpiled.body,
         inputs: transpiled.inputs || [],
         outputs,

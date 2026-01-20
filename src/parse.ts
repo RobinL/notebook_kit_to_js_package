@@ -2,9 +2,9 @@ import { JSDOM } from "jsdom";
 import slugify from "@sindresorhus/slugify";
 
 export interface RawCell {
-    id: number;
-    index: number; // 0-based stable index for cell:<index> fallback
-    name?: string; // from data-name attribute
+    id: string;           // from id attribute (required in canonical format)
+    index: number;        // 0-based stable index for fallback
+    output?: string;      // from output attribute (optional - for targeting)
     source: string;
     language: "js" | "markdown" | "html" | "tex";
 }
@@ -19,20 +19,22 @@ export function parseNotebookHtml(html: string): RawCell[] {
     const scriptContainer = notebookEl || doc;
     const scripts = scriptContainer.querySelectorAll("script");
 
-    let idCounter = 0;
     let indexCounter = 0;
+    let autoIdCounter = 0;
 
     scripts.forEach((script) => {
         const type = script.getAttribute("type");
-        const name = script.getAttribute("data-name") || undefined;
+        // Use id attribute (canonical format), or generate one if missing
+        const id = script.getAttribute("id") || `auto-${++autoIdCounter}`;
+        const output = script.getAttribute("output") || undefined;
         const source = script.textContent || "";
 
         if (type === "module") {
-            cells.push({ id: ++idCounter, index: indexCounter++, name, source, language: "js" });
+            cells.push({ id, index: indexCounter++, output, source, language: "js" });
         } else if (type === "text/markdown") {
-            cells.push({ id: ++idCounter, index: indexCounter++, name, source, language: "markdown" });
+            cells.push({ id, index: indexCounter++, output, source, language: "markdown" });
         } else if (type === "text/html") {
-            cells.push({ id: ++idCounter, index: indexCounter++, name, source, language: "html" });
+            cells.push({ id, index: indexCounter++, output, source, language: "html" });
         }
     });
 
