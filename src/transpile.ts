@@ -9,6 +9,7 @@ export interface TranspiledCell {
     inputs: string[];  // Variables this cell needs
     outputs: string[]; // Variables this cell defines (generation-time overrides)
     dependencies: Set<string>; // npm packages used
+    dependencySpecs: Record<string, string>; // package -> version/range/tag (from npm: imports)
     viewName?: string; // If set, this cell defines `viewof ${viewName}` and we should synthesize `${viewName}` via Generators.input
 }
 
@@ -76,7 +77,7 @@ export function processCell(
     }
 
     // 1. Rewrite imports (npm: -> bare) and collect deps
-    const { cleanedSource, dependencies } = rewriteImports(jsSource);
+    const { cleanedSource, dependencies, dependencySpecs } = rewriteImports(jsSource);
 
     // 2. Transpile OJS to JS using Notebook Kit
     const transpiled = transpileJavaScript(cleanedSource, {
@@ -105,6 +106,7 @@ export function processCell(
         inputs: transpiled.inputs || [],
         outputs,
         dependencies,
+        dependencySpecs,
         viewName
     };
 }

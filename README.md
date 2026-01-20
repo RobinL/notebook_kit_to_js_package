@@ -96,8 +96,22 @@ Uses `@observablehq/notebook-kit` to convert Observable JavaScript to standard J
 Scans for dependencies and rewrites imports:
 - `npm:d3` → `d3` (bare specifier)
 - `npm:diff-match-patch` → `diff-match-patch`
+- `npm:d3@7.9.0` → `d3` (and pins version to `7.9.0`)
 - Detects already-bare specifiers like `"lodash"`
 - Collects all dependencies for `package.json`
+
+#### Optional: Pin versions / add explicit deps
+
+By default, detected dependencies are added to the generated `package.json` with version `"latest"`.
+
+If you want to **pin versions** (or include additional dependencies that aren't detectable via static imports), add a dependency file next to your notebook HTML:
+
+- Preferred: `your-notebook.package.json`
+- Also supported: `package.json` in the same folder as the notebook
+
+Only the `dependencies` field is used. These specs override inferred ones.
+
+`file:` dependencies are supported and will be rewritten to remain valid from the output directory.
 
 ### 4. **Generate**
 Creates a complete npm package:

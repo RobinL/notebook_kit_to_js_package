@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "diff-match-patch": "^1.0.5",
+    "my-custom-lib": "file:./my-custom-lib"
+  }
+}

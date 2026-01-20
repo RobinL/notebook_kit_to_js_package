@@ -231,7 +231,11 @@ export function generateRuntimeJs(): string {
     ].join("\n");
 }
 
-export function generatePackageJson(name: string, dependencies: Set<string>): string {
+export function generatePackageJson(
+    name: string,
+    detectedDependencies: Set<string>,
+    dependencySpecs: Record<string, string> = {}
+): string {
     const depsObj: Record<string, string> = {
         "@observablehq/runtime": "^5.0.0",
         "@observablehq/inspector": "latest",
@@ -239,10 +243,17 @@ export function generatePackageJson(name: string, dependencies: Set<string>): st
         "@observablehq/inputs": "latest"
     };
 
+    // Apply explicit specs (can override defaults)
+    for (const [dep, spec] of Object.entries(dependencySpecs)) {
+        depsObj[dep] = spec;
+    }
+
     // Add detected dependencies
     // We default to "latest" because we extracted names but not versions
-    dependencies.forEach(dep => {
-        depsObj[dep] = "latest";
+    detectedDependencies.forEach(dep => {
+        if (!(dep in depsObj)) {
+            depsObj[dep] = "latest";
+        }
     });
 
     return JSON.stringify({
