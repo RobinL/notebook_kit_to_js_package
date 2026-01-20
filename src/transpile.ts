@@ -10,7 +10,9 @@ export interface TranspiledCell {
     outputs: string[];     // Variables this cell defines (generation-time overrides)
     dependencies: Set<string>; // npm packages used
     dependencySpecs: Record<string, string>; // package -> version/range/tag (from npm: imports)
-    viewName?: string;     // If set, this cell defines `viewof ${viewName}` and we should synthesize `${viewName}` via Generators.input
+    autodisplay: boolean;  // Whether to auto-display the cell's return value
+    usesDisplay: boolean;  // Whether the cell uses display() (needs shadow variable injection)
+    usesView: boolean;     // Whether the cell uses view() (needs shadow variable injection)
 }
 
 function escapeRegExp(value: string): string {
@@ -47,11 +49,6 @@ export function processCell(
 
     let jsSource = source;
 
-    // Detect notebook-kit view() usage. Look for pattern: const <name> = view(...)
-    // We'll use the first such match as the view name
-    const viewMatch = source.match(/\b(?:const|let|var)\s+(\w+)\s*=\s*view\s*\(/);
-    const viewName = viewMatch ? viewMatch[1] : undefined;
-
     // Convert non-JS blocks to template literals for the runtime
     // Dedent to remove HTML indentation that would otherwise create code blocks
     if (language === "markdown") {
@@ -60,16 +57,8 @@ export function processCell(
     } else if (language === "html") {
         const content = dedent(source);
         jsSource = `html\`${content.replace(/`/g, "\\`")}\``;
-    } else if (language === "js") {
-        // notebook-kit HTML exports rely on helper globals that aren't present in standard JS.
-        // We rewrite them away so the generated define.js becomes standard Observable Runtime code.
-        // - view(expr)    -> (expr)
-        // - display(expr) -> void (expr)
-        // The Runtime + Inspector will take care of display, and viewof/value is handled via Generators.input.
-        jsSource = jsSource
-            .replace(/\bview\s*\(/g, "(")
-            .replace(/\bdisplay\s*\(/g, "void (");
     }
+    // For JS: DO NOT rewrite view() or display() - they will be provided by shadow variables at runtime
 
     // 1. Rewrite imports (npm: -> bare) and collect deps
     const { cleanedSource, dependencies, dependencySpecs } = rewriteImports(jsSource);
@@ -80,25 +69,33 @@ export function processCell(
         resolveFiles: false
     });
 
-    // Build the outputs array
-    // notebook-kit transpileJavaScript returns outputs, but we prefer deriving from view detection
-    const outputs: string[] = [];
-    if (viewName) {
-        outputs.push(`viewof ${viewName}`);
-    } else if (transpiled.outputs && transpiled.outputs.length > 0) {
-        // Use transpiled outputs for non-view cells
-        outputs.push(...transpiled.outputs);
-    }
+    // notebook-kit determines display/view needs by whether they appear in inputs.
+    const inputs = transpiled.inputs || [];
+    const usesDisplay = inputs.includes("display");
+    const usesView = inputs.includes("view");
+
+    // Build the outputs array (use notebook-kit's own declaration analysis).
+    // Note: notebook-kit’s view() helper does NOT imply `viewof ...` outputs; it returns a value-generator.
+    const outputs: string[] = transpiled.outputs && transpiled.outputs.length > 0 ? [...transpiled.outputs] : [];
+
+    // Determine autodisplay:
+    // - If cell uses display() or view(), autodisplay is false (explicit display calls handle rendering)
+    // - If cell has outputs (is a "program" with declarations), autodisplay is false
+    // - If cell is a simple expression (no outputs, no display/view), autodisplay is true
+    const hasDeclarations = outputs.length > 0;
+    const autodisplay = !usesDisplay && !usesView && !hasDeclarations;
 
     return {
         id,
         index,
         output,
         body: transpiled.body,
-        inputs: transpiled.inputs || [],
+        inputs,
         outputs,
         dependencies,
         dependencySpecs,
-        viewName
+        autodisplay,
+        usesDisplay,
+        usesView
     };
 }
