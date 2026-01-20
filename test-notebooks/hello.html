@@ -1,0 +1,57 @@
+<!doctype html>
+<notebook>
+    <title>Hello, world! (diff-match-patch demo)</title>
+
+    <script type="text/markdown">
+    # Hello, world! (diff-match-patch demo)
+
+    Type into the boxes to see a live
+  </script>
+
+    <script type="module" data-name="one">
+        const one = view(Inputs.text({ label: "one", value: "robin jabba" }));
+
+
+
+
+        ({ one })
+    </script>
+
+    <script type="module" data-name="other">
+
+        const other = view(Inputs.text({ label: "other", value: "roin liinacre" }));
+
+
+
+        ({ other })
+    </script>
+
+
+
+
+    <script type="module" data-name="out">
+        import DiffMatchPatch from "diff-match-patch";
+
+        const dmp = new DiffMatchPatch();
+
+        const diffs = dmp.diff_main(one, other);
+
+
+        const out = document.createElement("div");
+
+        out.style.fontSize = "16px";
+        out.style.lineHeight = "1.6";
+
+        out.innerHTML = dmp.diff_prettyHtml(diffs);
+
+        display(out);
+        display(`Levenshtein distance: ${dmp.diff_levenshtein(diffs)}`);
+    </script>
+
+    <script type="module" data-name="message">
+        import hello_world from "my-custom-lib";
+
+        const message = hello_world();
+        display(message);
+    </script>
+</notebook>
