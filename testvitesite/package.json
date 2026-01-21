@@ -13,6 +13,7 @@
     "vite": "^6.0.5"
   },
   "dependencies": {
-    "hello-world-diff-match-patch-demo": "file:../test-lib"
+    "hello-world-diff-match-patch-demo": "file:../test-lib",
+    "my-custom-lib": "file:../test-notebooks/my-custom-lib"
   }
 }

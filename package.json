@@ -9,7 +9,10 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "tsx bin/convert.ts test-notebooks/hello.html --out test-lib"
+    "test": "NODE_OPTIONS= tsx bin/convert.ts test-notebooks/hello.html --out test-lib",
+    "demo:vite": "npm --prefix testvitesite run dev",
+    "demo:watch": "chokidar \"test-notebooks/**/*.html\" \"test-notebooks/**/*.package.json\" \"test-notebooks/**/package.json\" --initial -p --poll-interval 200 -d 300 -c \"npm run test && npm --prefix test-lib install\"",
+    "demo": "concurrently -k -n watch,vite \"npm run demo:watch\" \"npm run demo:vite\""
   },
   "dependencies": {
     "@observablehq/notebook-kit": "^1.5.1",
@@ -20,6 +23,8 @@
   "devDependencies": {
     "@types/jsdom": "^21.1.6",
     "@types/node": "^20.11.0",
+    "chokidar-cli": "^3.0.0",
+    "concurrently": "^9.0.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }
