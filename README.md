@@ -64,6 +64,38 @@ const { runtime } = mount(document.getElementById("notebook"));
 // runtime.dispose();
 ```
 
+## Demo (Vite + live reload)
+
+This repo includes a Vite demo app in `testvitesite/` that mounts the generated
+package (`test-lib/`) and is configured for reliable hot reload when you edit
+the notebook source.
+
+One-time setup:
+
+```bash
+npm install
+npm --prefix testvitesite install
+```
+
+Run the live demo:
+
+```bash
+npm run demo
+```
+
+What `npm run demo` does:
+
+- Watches `test-notebooks/**/*.html` and adjacent `*.package.json` / `package.json`
+- Rebuilds `test-lib/` on change (`npm run test`) and reinstalls its deps
+- Starts Vite (`testvitesite`) with aliases so local packages are treated as source
+
+You can run the pieces separately:
+
+```bash
+npm run demo:watch  # just rebuild on notebook changes
+npm run demo:vite   # just run the Vite dev server
+```
+
 ## Directing Output to Containers (Layout)
 
 This project now mirrors notebook-kit’s placement model:
@@ -559,6 +591,24 @@ const { runtime } = mount(document.getElementById("notebook"));
 
 // Later, when unmounting:
 runtime.dispose();
+```
+
+In Vite HMR scenarios, you typically dispose + remount when the package module
+itself updates:
+
+```javascript
+import { mount } from "hello-world-diff-match-patch-demo";
+
+let runtime = mount(document.getElementById("notebook")!).runtime;
+
+if (import.meta.hot) {
+  import.meta.hot.accept("hello-world-diff-match-patch-demo", (mod) => {
+    runtime.dispose();
+    runtime = mod.mount(document.getElementById("notebook")!).runtime;
+  });
+
+  import.meta.hot.dispose(() => runtime.dispose());
+}
 ```
 
 ---
