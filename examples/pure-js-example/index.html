@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Pure JS Observable Runtime Example</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@observablehq/inspector@5/dist/inspector.css">
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1rem;
+        }
+
+        .card {
+            background: #f9f9f9;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        h3 {
+            margin-top: 0;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🚀 Pure JavaScript + Observable Runtime</h1>
+    <p>No notebook HTML format, no transpilation—just the runtime API directly!</p>
+
+    <div class="card">
+        <h3>Input One</h3>
+        <div id="cell-one"></div>
+    </div>
+
+    <div class="card">
+        <h3>Input Other</h3>
+        <div id="cell-other"></div>
+    </div>
+
+    <div class="card">
+        <h3>Diff Result (reactive!)</h3>
+        <div id="cell-diff"></div>
+    </div>
+
+    <div class="card">
+        <h3>Vega Chart</h3>
+        <div id="cell-chart"></div>
+    </div>
+
+    <div class="card">
+        <h3>Selected Bar</h3>
+        <div id="cell-selected"></div>
+    </div>
+
+    <script type="module" src="./define.js"></script>
+</body>
+
+</html>
