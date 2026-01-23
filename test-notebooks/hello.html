@@ -5,7 +5,7 @@
     <script id="1" type="text/markdown">
     # Hello, world! (diff-match-patch demo)
 
-    Type into the boxes to see a live demo
+    Type into the boxes to see a live demo here
   </script>
 
     <script id="2" type="module">
@@ -53,4 +53,91 @@
         display(message);
 
     </script>
+
+    <script id="6" type="module">
+
+
+        const spec = {
+            $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+            description: "Match weight distribution",
+            data: {
+                values: [{ "match_weight": 5.5, "count": 4 }, { "match_weight": 4.5, "count": 1 }],
+            },
+            mark: "bar",
+            encoding: {
+                x: {
+                    field: "match_weight",
+                    type: "nominal",
+                    title: "Match weight",
+                },
+                y: {
+                    aggregate: "count",
+                    type: "quantitative",
+                    title: "Count",
+                },
+            },
+            params: [
+                {
+                    name: "selectBar",
+                    select: {
+                        "type": "point",
+                        "on": "click",
+                        "fields": ["match_weight"]
+                    }
+                }
+            ]
+        };
+
+    </script>
+
+    <script id="7" type="module">
+        import vegaEmbed from "vega-embed";
+        const container = document.createElement("div");
+
+        const chart_embeded = await vegaEmbed(container, spec);
+        const vegaView = chart_embeded.view;
+
+
+
+        display(container)
+    </script>
+
+    <script id="8" type="module">
+        // Cell 2: Create a reactive generator for the signal
+        const selectBar = (async function* () {
+            let resolve;
+            let current = vegaView.signal("selectBar");
+
+            const handler = (name, value) => {
+                debugger;
+                current = value;
+
+                if (resolve) resolve();
+            };
+
+            vegaView.addSignalListener("selectBar", handler);
+
+
+
+            // Clean up when cell is invalidated/re-run
+            invalidation.then(() => {
+                vegaView.removeSignalListener("selectBar", handler);
+            });
+
+            yield current; // Initial value
+            while (true) {
+                await new Promise(r => resolve = r);
+                yield current;
+            }
+        })();
+
+    </script>
+
+    <script id="9" type="module">
+        // Cell 3: Use the reactive value
+        display(html`Selected: ${selectBar?.a ?? "nothing"} with value ${selectBar?.b ?? "—"}`);
+
+    </script>
+
+
 </notebook>
