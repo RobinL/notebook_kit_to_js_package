@@ -200,6 +200,24 @@ Only the `dependencies` field is used. These specs override inferred ones.
 
 `file:` dependencies are supported and will be rewritten to remain valid from the output directory.
 
+#### Important: Peer Dependencies
+
+Some packages (like `vega-embed`) declare peer dependencies that npm won't automatically install. You must **explicitly list all required dependencies** in your notebook's `.package.json` file.
+
+For example, `vega-embed` requires both `vega` and `vega-lite` as peers:
+
+```json
+{
+  "dependencies": {
+    "vega": "^5.30.0",
+    "vega-lite": "^5.21.0",
+    "vega-embed": "^6.26.0"
+  }
+}
+```
+
+Check the package's documentation or npm warnings during `npm install` to identify peer dependencies.
+
 ### 4. **Generate**
 Creates a complete npm package:
 ```
@@ -355,7 +373,7 @@ notebook-to-lib/
 
 The repository includes test notebooks:
 
-- **hello.html**: Complex notebook with markdown, Observable Inputs, and external dependencies
+- **hello.html**: Complex notebook with markdown, Observable Inputs, external dependencies (diff-match-patch), and Vega-Lite charts
 - **simple-test.html**: Basic notebook with D3 for simple testing
 
 Run the conversion test:
