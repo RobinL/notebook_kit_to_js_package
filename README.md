@@ -6,6 +6,10 @@
 
 **notebook-to-lib** transforms Observable notebook-kit notebooks into standard npm packages that export Observable Runtime compatible modules. Instead of bundling everything into a single HTML file, this tool creates a proper JavaScript library with dependencies managed through npm.
 
+## ⚠️ Important note:
+
+After writing this code, i found that it's actually much simpler to skip the notebook to tranpilation step, and just write everythin in pure js, see `pure_js_translation`
+
 ### Why Use This?
 
 - **Reusable Components**: Convert notebooks into libraries that can be imported in other projects
