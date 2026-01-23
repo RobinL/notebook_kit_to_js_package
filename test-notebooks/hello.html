@@ -92,52 +92,37 @@
 
     <script id="7" type="module">
         import vegaEmbed from "vega-embed";
+
         const container = document.createElement("div");
+        const result = await vegaEmbed(container, spec, { actions: false });
 
-        const chart_embeded = await vegaEmbed(container, spec);
-        const vegaView = chart_embeded.view;
+        display(container);
+        const chartView = result.view;
+        invalidation.then(() => result.finalize());
 
-
-
-        display(container)
     </script>
 
     <script id="8" type="module">
-        // Cell 2: Create a reactive generator for the signal
-        const selectBar = (async function* () {
-            let resolve;
-            let current = vegaView.signal("selectBar");
+        function observeVegaSignal(view, signalName) {
+            return Generators.observe((notify) => {
+                const listener = (_name, value) => notify(value);
 
-            const handler = (name, value) => {
-                debugger;
-                current = value;
+                view.addSignalListener(signalName, listener);
+                notify(view.signal(signalName)); // initial value
 
-                if (resolve) resolve();
-            };
-
-            vegaView.addSignalListener("selectBar", handler);
-
-
-
-            // Clean up when cell is invalidated/re-run
-            invalidation.then(() => {
-                vegaView.removeSignalListener("selectBar", handler);
+                return () => view.removeSignalListener(signalName, listener);
             });
-
-            yield current; // Initial value
-            while (true) {
-                await new Promise(r => resolve = r);
-                yield current;
-            }
-        })();
-
+        }
     </script>
 
     <script id="9" type="module">
-        // Cell 3: Use the reactive value
-        display(html`Selected: ${selectBar?.a ?? "nothing"} with value ${selectBar?.b ?? "—"}`);
-
+        const selectedBar = observeVegaSignal(chartView, "selectBar");
     </script>
 
+
+
+    <script id="10" type="module">
+        md`Your selected weight is : ${selectedBar?.match_weight?.[0] ?? "—"}`
+    </script>
 
 </notebook>
