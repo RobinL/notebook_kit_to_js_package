@@ -19,6 +19,8 @@
     "vega-embed": "^6.26.0"
   },
   "devDependencies": {
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "acorn": "^8.14.0",
+    "acorn-walk": "^8.3.4"
   }
 }
